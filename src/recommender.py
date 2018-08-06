@@ -14,29 +14,29 @@ class DataType:
 
 class CollaborativeFiltering(object):
     __metaclass__ = abc.ABCMeta
-    
+
     def __init__(self, dataType = DataType.Explicit):
         self.dataType = dataType
         self.prefs = None
         self.itemList = None
-    
+
     @classmethod
     @abc.abstractmethod
     def buildModel(cls):
         raise NotImplementedError
-    
+
     @classmethod
     @abc.abstractmethod
     def Recommendation(cls):
         raise NotImplementedError
-    
+
     def getNearestNeighbors(self, target, simMeasure, nNeighbors = None):
         similarities = [(simMeasure(self.prefs[target], self.prefs[other]), other) for other in self.prefs if target != other]
         similarities.sort(reverse = True)
         if nNeighbors != None:
             similarities = similarities[0:nNeighbors]
         return similarities     # similarities = [(similarity, neighbor), ...]
-    
+
     def loadExtModel(self, pathDump):
         print("Loading external model...")
         try:
@@ -48,7 +48,7 @@ class CollaborativeFiltering(object):
         except:
             print("\tFailed!")
             return None
-        
+
     def dumpModel(self, model, pathDump):
         try:
             file = open(pathDump, "wb")
@@ -65,7 +65,7 @@ class UserBased(CollaborativeFiltering):
     def __init__(self, dataType = DataType.Explicit):
         super().__init__(dataType)
         print("User-based Collaborative Filtering")
-        
+
     def loadData(self, data):
         if isinstance(data, dict):          # If 'data' is preferences on users for training
             self.prefs = data
@@ -75,24 +75,24 @@ class UserBased(CollaborativeFiltering):
         for user in self.prefs:
             for item in self.prefs[user]:
                 self.itemList[item] = None
-    
+
     def buildModel(self, simMeasure = similarity.cosine_intersection, nNeighbors = None, pathDump = None):
         # Model contains top-K similar users for each user and their similarities.
         # Model format: {user: [(similarity, neighbor), ...], ...}
         model = self.loadExtModel(pathDump)
         if model != None:
             return model
-        
+
         print("Model builder is running...")
         model = {}
         for user in self.prefs:
             model[user] = self.getNearestNeighbors(user, simMeasure, nNeighbors)
-            
+
         if pathDump != None:
             self.dumpModel(model, pathDump)
         print("\tComplete!")
         return model
-    
+
     def getPredictedRating(self, user, item, nearestNeighbors):
         if self.dataType == DataType.Unary:
             if item in self.prefs[user]:
@@ -119,7 +119,7 @@ class UserBased(CollaborativeFiltering):
             if normalizingFactor == 0:
                 return 0
             return meanRating + (weightedSum / normalizingFactor)
-    
+
     def Recommendation(self, user, simMeasure = similarity.cosine_intersection, nNeighbors = 50, model = None, topN = None):
         if model != None:
             '''
@@ -155,13 +155,13 @@ class UserBased(CollaborativeFiltering):
                     if item in self.prefs[neighbor]:
                         itemRaters[neighbor] = similarity
                 predictedScores.append((self.getPredictedRating(user, item, itemRaters), item))
-        
+
         predictedScores.sort(reverse = True)
         recommendation = [item for similarity, item in predictedScores]
         if topN != None:
             recommendation = recommendation[0:topN]
         return recommendation
-    
+
 class ItemBased(CollaborativeFiltering):
     '''
     For more details, reference the following paper:
@@ -170,7 +170,7 @@ class ItemBased(CollaborativeFiltering):
     def __init__(self, dataType = DataType.Explicit):
         super().__init__(dataType)
         print("Item-based Collaborative Filtering")
-        
+
     def loadData(self, data):
         if isinstance(data, dict):          # If 'data' is preferences on users for training
             self.prefsOnUser = data
@@ -179,7 +179,7 @@ class ItemBased(CollaborativeFiltering):
             self.prefsOnUser = tool.loadData(data)
             self.prefs = tool.transposePrefs(self.prefsOnUser)
         self.itemList = self.prefs.keys()
-    
+
     def buildModel(self, simMeasure = similarity.cosine, nNeighbors = 20, pathDump = None):
         '''
         The j-th column of the model(matrix) stores the k most similar items to item j.
@@ -190,7 +190,7 @@ class ItemBased(CollaborativeFiltering):
         model = self.loadExtModel(pathDump)
         if model != None:
             return model
-        
+
         print("Model builder is running...")
         model = {}
         for item in self.prefs:
@@ -198,19 +198,19 @@ class ItemBased(CollaborativeFiltering):
             correlations = self.getNearestNeighbors(item, simMeasure, nNeighbors)
             for correlation, neighbor in correlations:
                 model[item][neighbor] = correlation
-        
+
         # Row normalization
         for c in model:
             COLSUM = sum([model[c][r] for r in model[c]])
             if COLSUM > 0:
                 for r in model[c]:
                     model[c][r] /= COLSUM
-        
+
         if pathDump != None:
             self.dumpModel(model, pathDump)
         print("\tComplete!")
         return model
-    
+
     def Recommendation(self, user, simMeasure = similarity.cosine, nNeighbors = 20, model = None, topN = None):
         '''
         Pseudo code:
@@ -227,12 +227,12 @@ class ItemBased(CollaborativeFiltering):
         for candidate in self.itemList:
             if candidate in self.prefsOnUser[user]:
                 continue
-            
+
             if model != None:
                 correlations = model[candidate]
             else:
                 correlations = self.getNearestNeighbors(candidate, simMeasure, nNeighbors)
-            
+
             score = sum([correlations[candidate] * self.prefsOnUser[user][item]
                          for item in self.prefsOnUser[user] if candidate in correlations])
             predictedScores.append((score, candidate))

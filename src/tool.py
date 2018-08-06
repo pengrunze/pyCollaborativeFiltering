@@ -13,7 +13,7 @@ def loadData(filePath, inv = False):
             for line in file:
                 line = line.replace("\n", "")
                 tokens = line.split("\t")
-                
+
                 if len(tokens) < 2:
                     continue
                 elif len(tokens) == 2:
@@ -24,7 +24,7 @@ def loadData(filePath, inv = False):
                     user = tokens[0]
                     item = tokens[1]
                     rating = tokens[2]
-                
+
                 # Store data
                 if inv == False:
                     data.setdefault(user, {})
