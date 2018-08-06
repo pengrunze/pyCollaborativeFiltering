@@ -4,31 +4,15 @@ import numpy as np
 
 
 def cosine(dataA, dataB):
-    if type(dataA) is list and type(dataB) is list:
-        if len(dataA) != len(dataB):
-            print("Error: the length of two input lists are not same.")
-            return -1
-        AB = sum([dataA[i] * dataB[i] for i in range(len(dataA))])
-        normA = sqrt(sum([dataA[i] ** 2 for i in range(len(dataA))]))
-        normB = sqrt(sum([dataB[i] ** 2 for i in range(len(dataB))]))
-        denominator = normA * normB
-        if denominator == 0:
-            return 0
-        return AB / denominator
-    elif type(dataA) is dict and type(dataB) is dict:
-        interSet = [obj for obj in dataA if obj in dataB]
-        if len(interSet) == 0:
-            return 0
-        AB = sum([dataA[obj] * dataB[obj] for obj in interSet])
-        normA = sqrt(sum([dataA[obj] ** 2 for obj in dataA]))
-        normB = sqrt(sum([dataB[obj] ** 2 for obj in dataB]))
-        denominator = normA * normB
-        if denominator == 0:
-            return -1
-        return AB / denominator
-    else:
-        print("Error: input data type is invalid.")
-        return -1
+    interSet = [obj for obj in dataA if obj in dataB]
+    if interSet:
+        AB = np.array([(dataA[i],dataB[i]) for i in interSet])
+        AB = np.dot(AB[:,0], AB[:,1])
+        normB = np.array(list(dataB.values()))
+        normB = sqrt(np.dot(normB, normB))
+        return AB / normB
+    return 0
+
 
 def cosine_intersection(dataA, dataB):
     if type(dataA) is list and type(dataB) is list:
